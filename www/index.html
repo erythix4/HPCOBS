@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Observability for HPC - FOSDEM 2026 Demo</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --cyan: #06b6d4;
+            --teal: #14b8a6;
+            --amber: #f59e0b;
+            --red: #ef4444;
+            --text-light: #f1f5f9;
+            --text-muted: #94a3b8;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            padding: 3rem 0;
+            border-bottom: 1px solid var(--bg-card);
+        }
+        
+        .badge {
+            display: inline-block;
+            background: var(--cyan);
+            color: var(--bg-dark);
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        h1 span {
+            color: var(--cyan);
+        }
+        
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.25rem;
+        }
+        
+        .hook {
+            background: var(--bg-card);
+            border-left: 4px solid var(--amber);
+            padding: 1.5rem;
+            margin: 2rem 0;
+            font-size: 1.25rem;
+        }
+        
+        .hook strong {
+            color: var(--amber);
+        }
+        
+        .section {
+            margin: 3rem 0;
+        }
+        
+        h2 {
+            color: var(--cyan);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        h2::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 1.5rem;
+            background: var(--cyan);
+        }
+        
+        .layers {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .layer-card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 1.5rem;
+            border-left: 4px solid var(--text-muted);
+        }
+        
+        .layer-card.layer-1 { border-color: var(--text-muted); }
+        .layer-card.layer-2 { border-color: var(--amber); }
+        .layer-card.layer-3 { border-color: var(--red); }
+        
+        .layer-card h3 {
+            font-size: 1.125rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .layer-card.layer-1 h3 { color: var(--text-muted); }
+        .layer-card.layer-2 h3 { color: var(--amber); }
+        .layer-card.layer-3 h3 { color: var(--red); }
+        
+        .layer-card .status {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-bottom: 1rem;
+        }
+        
+        .layer-card ul {
+            list-style: none;
+        }
+        
+        .layer-card li {
+            padding: 0.25rem 0;
+            color: var(--text-muted);
+        }
+        
+        .layer-card li code {
+            background: var(--bg-dark);
+            padding: 0.125rem 0.375rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            color: var(--cyan);
+        }
+        
+        .insight {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(20, 184, 166, 0.1));
+            border: 1px solid var(--cyan);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+        
+        .insight p {
+            font-size: 1.25rem;
+            color: var(--cyan);
+            font-weight: 500;
+        }
+        
+        .scenarios {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .scenario {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        
+        .scenario h4 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .scenario.active h4::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+        }
+        
+        .scenario p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+        
+        .scenario code {
+            display: block;
+            background: var(--bg-dark);
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: var(--teal);
+        }
+        
+        .metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .metrics-table th,
+        .metrics-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--bg-card);
+        }
+        
+        .metrics-table th {
+            color: var(--cyan);
+            font-weight: 500;
+        }
+        
+        .metrics-table code {
+            background: var(--bg-dark);
+            padding: 0.125rem 0.375rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+        }
+        
+        .cta {
+            text-align: center;
+            margin: 3rem 0;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: var(--cyan);
+            color: var(--bg-dark);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.125rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-light);
+            margin-left: 1rem;
+        }
+        
+        .architecture {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            overflow-x: auto;
+        }
+        
+        .architecture pre {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            white-space: pre;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            border-top: 1px solid var(--bg-card);
+            margin-top: 3rem;
+            color: var(--text-muted);
+        }
+        
+        footer a {
+            color: var(--cyan);
+            text-decoration: none;
+        }
+        
+        .tagline {
+            font-style: italic;
+            margin-top: 1rem;
+        }
+
+        .why-section {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .why-section h3 {
+            color: var(--amber);
+            margin-bottom: 1rem;
+        }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+
+        .comparison-col h4 {
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid;
+        }
+
+        .comparison-col.before h4 {
+            color: var(--red);
+            border-color: var(--red);
+        }
+
+        .comparison-col.after h4 {
+            color: var(--teal);
+            border-color: var(--teal);
+        }
+
+        .comparison-col ul {
+            list-style: none;
+        }
+
+        .comparison-col li {
+            padding: 0.5rem 0;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 768px) {
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 1.75rem;
+            }
+            
+            .btn-secondary {
+                margin-left: 0;
+                margin-top: 1rem;
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <span class="badge">FOSDEM 2026 - HPC Devroom</span>
+            <h1>Observability for AI Workloads on HPC</h1>
+            <h1><span>Beyond GPU Utilization Metrics</span></h1>
+            <p class="subtitle">Samuel Desseaux - Erythix / Aureonis</p>
+        </header>
+        
+        <div class="hook">
+            <strong>"Your GPU is at 95% utilization. Great. But is your model actually learning?"</strong>
+        </div>
+        
+        <section class="section">
+            <h2>The Problem</h2>
+            <p>Most HPC and AI teams monitor infrastructure metrics: GPU utilization, memory usage, power draw. These metrics can look perfectly healthy while your training is completely broken.</p>
+            
+            <div class="why-section">
+                <h3>Why Traditional Monitoring Fails for AI</h3>
+                <div class="comparison">
+                    <div class="comparison-col before">
+                        <h4>What You See</h4>
+                        <ul>
+                            <li>GPU Utilization: 92%</li>
+                            <li>VRAM Usage: 85%</li>
+                            <li>Temperature: 72C</li>
+                            <li>Power: 350W</li>
+                        </ul>
+                        <p style="margin-top: 1rem; color: var(--teal);">Everything looks healthy!</p>
+                    </div>
+                    <div class="comparison-col after">
+                        <h4>What's Actually Happening</h4>
+                        <ul>
+                            <li>Throughput dropped 40%</li>
+                            <li>Data loading at 45% wait time</li>
+                            <li>Loss stopped decreasing</li>
+                            <li>Wasting $$$$ on GPU hours</li>
+                        </ul>
+                        <p style="margin-top: 1rem; color: var(--red);">Training is broken!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>The Three Layers of AI Observability</h2>
+            <p>Effective AI observability requires monitoring at three distinct layers, with correlation between them.</p>
+            
+            <div class="layers">
+                <div class="layer-card layer-1">
+                    <h3>Layer 1: Infrastructure</h3>
+                    <p class="status">What we already do</p>
+                    <ul>
+                        <li><code>dcgm_fi_dev_gpu_util</code> GPU utilization</li>
+                        <li><code>dcgm_fi_dev_fb_used</code> VRAM usage</li>
+                        <li><code>dcgm_fi_dev_power_usage</code> Power draw</li>
+                        <li><code>dcgm_fi_dev_tensor_active</code> Tensor cores</li>
+                    </ul>
+                </div>
+                
+                <div class="layer-card layer-2">
+                    <h3>Layer 2: Workload Efficiency</h3>
+                    <p class="status">What we miss</p>
+                    <ul>
+                        <li><code>training_samples_per_second</code> Real throughput</li>
+                        <li><code>training_data_loading_ratio</code> I/O bottleneck</li>
+                        <li><code>training_model_flops_utilization</code> MFU</li>
+                        <li><code>training_all_reduce_time</code> Sync overhead</li>
+                    </ul>
+                </div>
+                
+                <div class="layer-card layer-3">
+                    <h3>Layer 3: Model Health</h3>
+                    <p class="status">What we ignore</p>
+                    <ul>
+                        <li><code>training_loss</code> Loss curves</li>
+                        <li><code>training_gradient_norm</code> Gradient magnitude</li>
+                        <li><code>training_convergence_velocity</code> Learning rate</li>
+                        <li><code>training_perplexity</code> Model quality</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="insight">
+                <p>Cross-layer correlation is the game changer.<br>
+                When GPU util is high but throughput drops, you have a hidden bottleneck.</p>
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>Key Metrics Explained</h2>
+            
+            <table class="metrics-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Why It Matters</th>
+                        <th>Alert Threshold</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>training_model_flops_utilization</code></td>
+                        <td>MFU is the gold standard - shows how much of theoretical GPU performance you're using</td>
+                        <td>&lt; 30% is concerning</td>
+                    </tr>
+                    <tr>
+                        <td><code>training_data_loading_ratio</code></td>
+                        <td>Time spent waiting for data vs training. Hidden I/O bottlenecks appear here</td>
+                        <td>&gt; 15% indicates bottleneck</td>
+                    </tr>
+                    <tr>
+                        <td><code>training_gradient_norm</code></td>
+                        <td>Detects exploding/vanishing gradients before they crash training</td>
+                        <td>&gt; 100 = explosion, &lt; 0.01 = vanishing</td>
+                    </tr>
+                    <tr>
+                        <td><code>training_convergence_velocity</code></td>
+                        <td>Rate of loss decrease. Negative means model is getting worse</td>
+                        <td>&lt; 0 for sustained period</td>
+                    </tr>
+                    <tr>
+                        <td><code>training_samples_per_second</code></td>
+                        <td>Real training velocity. Compare against your baseline</td>
+                        <td>40% drop from baseline</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        
+        <section class="section">
+            <h2>Demo Scenarios</h2>
+            <p>This demo simulates different failure modes. Switch scenarios to see how the three layers reveal problems that traditional monitoring misses.</p>
+            
+            <div class="scenarios">
+                <div class="scenario active">
+                    <h4>normal</h4>
+                    <p>All metrics healthy. Baseline for comparison.</p>
+                    <code>SCENARIO=normal docker-compose up -d</code>
+                </div>
+                
+                <div class="scenario">
+                    <h4>io_bottleneck</h4>
+                    <p>GPU looks fine (92%) but throughput drops 40%. Data loading is the culprit.</p>
+                    <code>SCENARIO=io_bottleneck docker-compose up -d</code>
+                </div>
+                
+                <div class="scenario">
+                    <h4>gradient_explosion</h4>
+                    <p>Infra metrics normal, but gradients explode and loss increases.</p>
+                    <code>SCENARIO=gradient_explosion docker-compose up -d</code>
+                </div>
+                
+                <div class="scenario">
+                    <h4>loss_plateau</h4>
+                    <p>Everything runs, but model stopped learning. Loss stagnates.</p>
+                    <code>SCENARIO=loss_plateau docker-compose up -d</code>
+                </div>
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>Architecture</h2>
+            <div class="architecture">
+                <pre>
++-------------------+     +-------------------+     +-------------------+
+|   Training        |     |    VMAgent        |     | VictoriaMetrics   |
+|   Simulator       |----&gt;|   (scraper)       |----&gt;|    (TSDB)         |
+|   :9101           |     |   :8429           |     |    :8428          |
++-------------------+     +-------------------+     +--------+----------+
+                                                             |
+                          +-------------------+              |
+                          |    VMAlert        |&lt;-------------+
+                          |  (alerting)       |              |
+                          |   :8880           |              |
+                          +-------------------+              |
+                                                             |
+                          +-------------------+              |
+                          |    Grafana        |&lt;-------------+
+                          | (visualization)   |
+                          |   :3000           |
+                          +-------------------+
+                </pre>
+            </div>
+            <p style="margin-top: 1rem; color: var(--text-muted);">
+                <strong>Stack:</strong> VictoriaMetrics + VMAgent + VMAlert + Grafana<br>
+                <strong>Why:</strong> Open-source, high-cardinality support, European sovereignty, no vendor lock-in
+            </p>
+        </section>
+        
+        <section class="section">
+            <h2>The Shift in Alerting</h2>
+            <div class="why-section">
+                <div class="comparison">
+                    <div class="comparison-col before">
+                        <h4>Traditional Alerts</h4>
+                        <ul>
+                            <li>"GPU temperature high"</li>
+                            <li>"Memory usage &gt; 90%"</li>
+                            <li>"Node unreachable"</li>
+                        </ul>
+                    </div>
+                    <div class="comparison-col after">
+                        <h4>Semantic Alerts</h4>
+                        <ul>
+                            <li>"Training stalled despite healthy infrastructure"</li>
+                            <li>"Hidden I/O bottleneck detected"</li>
+                            <li>"Model convergence degraded"</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <div class="cta">
+            <a href="http://localhost:3000" class="btn" target="_blank">Open Grafana Dashboard</a>
+            <a href="http://localhost:8428" class="btn btn-secondary" target="_blank">VictoriaMetrics UI</a>
+        </div>
+        
+        <footer>
+            <p><strong>Samuel Desseaux</strong> - CTO-Advocate</p>
+            <p>
+                <a href="https://erythix.com">erythix.com</a> | 
+                <a href="https://github.com/erythix/ai-observability-hub">GitHub</a>
+            </p>
+            <p>VictoriaMetrics Training Partner | CIQ Partner</p>
+            <p class="tagline">"moins de bruit, plus de terrain"</p>
+        </footer>
+    </div>
+</body>
+</html>

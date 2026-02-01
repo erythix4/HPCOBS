@@ -1,0 +1,25 @@
+# Prometheus scrape configuration for AI Observability Demo
+# FOSDEM 2026
+
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  # Training Simulator metrics (all 3 layers)
+  - job_name: 'ai-training'
+    static_configs:
+      - targets: ['training-simulator:9101']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'hpc-node-01'
+
+  # VictoriaMetrics self-monitoring
+  - job_name: 'victoriametrics'
+    static_configs:
+      - targets: ['victoriametrics:8428']
+
+  # VMAgent self-monitoring
+  - job_name: 'vmagent'
+    static_configs:
+      - targets: ['vmagent:8429']

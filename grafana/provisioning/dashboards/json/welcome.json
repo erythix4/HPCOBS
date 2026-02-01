@@ -1,0 +1,277 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Go to Metrics Dashboard",
+      "tooltip": "",
+      "type": "link",
+      "url": "/d/ai-obs-demo-fosdem/ai-observability-3-layers-demo"
+    }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "# AI Observability for HPC: Beyond GPU Utilization\n\n**FOSDEM 2026 - HPC Devroom** | Samuel Desseaux - Erythix / Aureonis\n\n---\n\n*Your GPU is at 95% utilization. Great. But is your model actually learning?*",
+        "mode": "markdown"
+      },
+      "type": "text"
+    },
+    {
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 4 },
+      "id": 2,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "## The Problem\n\nMost HPC teams monitor GPU utilization, memory, and power. These metrics can look **perfectly healthy** while:\n\n- Training throughput drops 40%\n- Model stops converging\n- Gradients explode\n- Data pipeline bottlenecks waste GPU cycles\n\n**High utilization ≠ useful work**\n\nTraditional monitoring creates dangerous blind spots.",
+        "mode": "markdown"
+      },
+      "type": "text"
+    },
+    {
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 4 },
+      "id": 3,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "## The Solution: 3 Layers\n\n| Layer | Focus | Example Metrics |\n|-------|-------|----------------|\n| **Infrastructure** | Hardware health | GPU util, VRAM, power, temp |\n| **Workload** | Training efficiency | Throughput, I/O ratio, MFU |\n| **Model Health** | Learning progress | Loss, gradients, convergence |\n\n**Cross-layer correlation** reveals hidden problems:\n\n*GPU util high + throughput low = I/O bottleneck*\n\n*GPU util high + loss plateau = model issue*",
+        "mode": "markdown"
+      },
+      "type": "text"
+    },
+    {
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 4 },
+      "id": 4,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "## This Demo\n\nSimulates a 4-GPU training job with **4 scenarios**:\n\n1. **normal** - All metrics healthy\n2. **io_bottleneck** - GPU looks fine, throughput drops\n3. **gradient_explosion** - Training becomes unstable\n4. **loss_plateau** - Model stops improving\n\nSwitch scenarios:\n```bash\nSCENARIO=io_bottleneck \\\n  docker-compose up -d\n```\n\n[Open Metrics Dashboard](/d/ai-obs-demo-fosdem)",
+        "mode": "markdown"
+      },
+      "type": "text"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 12 },
+      "id": 100,
+      "panels": [],
+      "title": "Layer 1: Infrastructure - What we already monitor",
+      "type": "row"
+    },
+    {
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 13 },
+      "id": 10,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "### GPU & Hardware Metrics\n\nTraditional DCGM-style metrics that most teams already collect:\n\n| Metric | What it measures | Limitation |\n|--------|-----------------|------------|\n| `gpu_util` | % time GPU executing | Doesn't show *useful* work |\n| `fb_used` | VRAM consumption | High usage ≠ efficient usage |\n| `power_usage` | Energy draw | Cost metric, not efficiency |\n| `temperature` | Thermal state | Safety, not performance |\n| `nvlink_bandwidth` | Inter-GPU comm | Raw capacity, not utilization |\n\n**These metrics are necessary but not sufficient.**",
+        "mode": "markdown"
+      },
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 20, "gradientMode": "scheme", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "smooth", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": false, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } },
+          "mappings": [], "max": 100, "min": 0,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 13 },
+      "id": 11,
+      "options": { "legend": { "calcs": ["mean"], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "victoriametrics" }, "expr": "avg(dcgm_fi_dev_gpu_util)", "legendFormat": "GPU Util (avg)", "refId": "A" }],
+      "title": "GPU Utilization - Looks healthy?",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 },
+      "id": 101,
+      "panels": [],
+      "title": "Layer 2: Workload Efficiency - What we miss",
+      "type": "row"
+    },
+    {
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 20 },
+      "id": 20,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "### Training Efficiency Metrics\n\nThese metrics reveal **hidden bottlenecks** invisible to infrastructure monitoring:\n\n| Metric | What it reveals |\n|--------|----------------|\n| `samples_per_second` | Real training velocity |\n| `data_loading_ratio` | Time waiting for data vs computing |\n| `mfu` (Model FLOPs Util) | % of theoretical GPU performance |\n| `all_reduce_time` | Gradient sync overhead |\n| `forward/backward_time` | Training step breakdown |\n\n**Key insight**: If GPU util is 95% but samples/sec is dropping, you have a hidden bottleneck.",
+        "mode": "markdown"
+      },
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 20, "gradientMode": "scheme", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "smooth", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": false, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "line+area" } },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.15 }, { "color": "red", "value": 0.3 }] },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 20 },
+      "id": 21,
+      "options": { "legend": { "calcs": ["mean"], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "victoriametrics" }, "expr": "training_data_loading_ratio", "legendFormat": "Data Loading Wait", "refId": "A" }],
+      "title": "Data Loading Ratio - The hidden culprit",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 30 }, { "color": "green", "value": 40 }] },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 20 },
+      "id": 22,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "victoriametrics" }, "expr": "training_model_flops_utilization", "refId": "A" }],
+      "title": "MFU - The gold standard metric",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
+      "id": 102,
+      "panels": [],
+      "title": "Layer 3: Model Health - What we ignore",
+      "type": "row"
+    },
+    {
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 27 },
+      "id": 30,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "### Model Training Metrics\n\nThe ultimate question: **Is your model actually learning?**\n\n| Metric | What it reveals |\n|--------|----------------|\n| `training_loss` | Learning progress |\n| `gradient_norm` | Training stability |\n| `convergence_velocity` | Rate of improvement |\n| `perplexity` | LLM-specific quality |\n| `loss_spike_detected` | Anomaly detection |\n\n**Anomaly patterns**:\n- `gradient_norm > 100` = explosion risk\n- `gradient_norm < 0.01` = vanishing gradients\n- `loss increasing` = training diverging",
+        "mode": "markdown"
+      },
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 20, "gradientMode": "scheme", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "smooth", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": false, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 27 },
+      "id": 31,
+      "options": { "legend": { "calcs": ["lastNotNull", "min"], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "victoriametrics" }, "expr": "training_loss", "legendFormat": "Loss", "refId": "A" }],
+      "title": "Training Loss - Is it decreasing?",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 20, "gradientMode": "scheme", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "smooth", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "log", "log": 10 }, "showPoints": "never", "spanNulls": false, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "line+area" } },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 10 }, { "color": "red", "value": 100 }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 27 },
+      "id": 32,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "victoriametrics" }, "expr": "training_gradient_norm", "legendFormat": "Gradient Norm", "refId": "A" }],
+      "title": "Gradient Norm - Stable?",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 },
+      "id": 103,
+      "panels": [],
+      "title": "The Power of Cross-Layer Correlation",
+      "type": "row"
+    },
+    {
+      "gridPos": { "h": 5, "w": 10, "x": 0, "y": 34 },
+      "id": 40,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "### Why it matters\n\nCross-layer correlation answers questions like:\n\n- **GPU high + throughput low** = I/O or communication bottleneck\n- **GPU high + loss plateau** = model architecture issue\n- **GPU normal + gradients exploding** = learning rate too high\n\n**The shift in alerting**:\n\n| Traditional | AI-Aware |\n|------------|----------|\n| \"GPU is down\" | \"Training stalled despite healthy infra\" |\n| \"Memory full\" | \"Throughput dropped 40%\" |\n| \"High temp\" | \"Model stopped converging\" |",
+        "mode": "markdown"
+      },
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "smooth", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": false, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "short"
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "GPU Util" }, "properties": [{ "id": "custom.axisPlacement", "value": "right" }, { "id": "unit", "value": "percent" }] }
+        ]
+      },
+      "gridPos": { "h": 5, "w": 14, "x": 10, "y": 34 },
+      "id": 41,
+      "options": { "legend": { "calcs": ["mean"], "displayMode": "table", "placement": "right", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "victoriametrics" }, "expr": "training_samples_per_second", "legendFormat": "Throughput", "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "victoriametrics" }, "expr": "avg(dcgm_fi_dev_gpu_util)", "legendFormat": "GPU Util", "refId": "B" },
+        { "datasource": { "type": "prometheus", "uid": "victoriametrics" }, "expr": "training_data_loading_ratio * 1000", "legendFormat": "I/O Wait (x1000)", "refId": "C" }
+      ],
+      "title": "Cross-Layer View: Spot the hidden bottleneck",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 39 },
+      "id": 50,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "---\n\n## Open-Source Stack\n\n| Component | Role | Why |\n|-----------|------|-----|\n| **VictoriaMetrics** | Time-series DB | High cardinality, long retention, efficient |\n| **vmagent** | Metrics collection | Lightweight, Prometheus-compatible |\n| **vmalert** | Alerting | Semantic, training-aware alerts |\n| **Grafana** | Visualization | Cross-layer correlation dashboards |\n| **DCGM Exporter** | GPU metrics | NVIDIA standard |\n| **PyTorch Hooks** | Training metrics | Custom callbacks for model health |\n\n**No vendor lock-in. European sovereignty. Full transparency.**\n\n---\n\n[**Open the Full Metrics Dashboard**](/d/ai-obs-demo-fosdem/ai-observability-3-layers-demo) | [GitHub: erythix/ai-observability-hub](https://github.com/erythix/ai-observability-hub)",
+        "mode": "markdown"
+      },
+      "type": "text"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["ai", "hpc", "observability", "fosdem", "overview"],
+  "templating": { "list": [] },
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Welcome - AI Observability Explained",
+  "uid": "ai-obs-welcome",
+  "version": 1,
+  "weekStart": ""
+}

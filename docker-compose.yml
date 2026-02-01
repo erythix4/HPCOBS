@@ -1,0 +1,135 @@
+# AI Observability Demo Stack
+# FOSDEM 2026 - HPC Devroom
+# Samuel Desseaux - Erythix
+
+services:
+  # ============================================
+  # VICTORIAMETRICS - Time Series Database
+  # ============================================
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.96.0
+    container_name: victoriametrics
+    ports:
+      - "8428:8428"
+    volumes:
+      - vmdata:/storage
+    command:
+      - '--storageDataPath=/storage'
+      - '--httpListenAddr=:8428'
+      - '--retentionPeriod=30d'
+    restart: unless-stopped
+    networks:
+      - ai-obs
+
+  # ============================================
+  # VMALERT - Alerting Engine
+  # ============================================
+  vmalert:
+    image: victoriametrics/vmalert:v1.96.0
+    container_name: vmalert
+    ports:
+      - "8880:8880"
+    volumes:
+      - ./alerts:/etc/alerts:ro
+    command:
+      - '--datasource.url=http://victoriametrics:8428'
+      - '--remoteRead.url=http://victoriametrics:8428'
+      - '--remoteWrite.url=http://victoriametrics:8428'
+      - '--rule=/etc/alerts/*.yml'
+      - '--httpListenAddr=:8880'
+    depends_on:
+      - victoriametrics
+    restart: unless-stopped
+    networks:
+      - ai-obs
+
+  # ============================================
+  # GRAFANA - Visualization
+  # ============================================
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=fosdem2026
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - victoriametrics
+    restart: unless-stopped
+    networks:
+      - ai-obs
+
+  # ============================================
+  # AI TRAINING SIMULATOR
+  # Simulates PyTorch training with all 3 layers of metrics
+  # ============================================
+  training-simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile.simulator
+    container_name: training-simulator
+    ports:
+      - "9101:9101"  # Prometheus metrics endpoint
+    environment:
+      - SCENARIO=${SCENARIO:-normal}
+      - METRICS_PORT=9101
+      # Scenarios: normal, io_bottleneck, gradient_explosion, loss_plateau
+    restart: unless-stopped
+    networks:
+      - ai-obs
+
+  # ============================================
+  # VMAGENT - Metrics Scraper
+  # ============================================
+  vmagent:
+    image: victoriametrics/vmagent:v1.96.0
+    container_name: vmagent
+    ports:
+      - "8429:8429"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--promscrape.config=/etc/prometheus/prometheus.yml'
+      - '--remoteWrite.url=http://victoriametrics:8428/api/v1/write'
+      - '--httpListenAddr=:8429'
+    depends_on:
+      victoriametrics:
+        condition: service_started
+      training-simulator:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - ai-obs
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8429/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  # ============================================
+  # WEB - Landing Page
+  # ============================================
+  web:
+    image: nginx:alpine
+    container_name: demo-web
+    ports:
+      - "8080:80"
+    volumes:
+      - ./www:/usr/share/nginx/html:ro
+    restart: unless-stopped
+    networks:
+      - ai-obs
+
+volumes:
+  vmdata:
+  grafana-data:
+
+networks:
+  ai-obs:
+    driver: bridge

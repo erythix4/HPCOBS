@@ -1,0 +1,229 @@
+# AI Observability Alert Rules
+# FOSDEM 2026 - HPC Devroom Demo
+# Samuel Desseaux - Erythix
+#
+# These alerts demonstrate the shift from infrastructure-centric
+# to semantic, training-aware alerting.
+
+groups:
+  # ============================================
+  # Traditional Infrastructure Alerts (Layer 1)
+  # What most teams already have
+  # ============================================
+  - name: infrastructure_alerts
+    interval: 30s
+    rules:
+      - alert: GPUHighTemperature
+        expr: dcgm_fi_dev_gpu_temp > 85
+        for: 2m
+        labels:
+          severity: warning
+          layer: infrastructure
+        annotations:
+          summary: "GPU {{ $labels.gpu }} temperature high"
+          description: "GPU temperature is {{ $value }}°C on {{ $labels.node }}"
+      
+      - alert: GPUMemoryNearFull
+        expr: (dcgm_fi_dev_fb_used / dcgm_fi_dev_fb_total) > 0.95
+        for: 5m
+        labels:
+          severity: warning
+          layer: infrastructure
+        annotations:
+          summary: "GPU {{ $labels.gpu }} memory nearly full"
+          description: "GPU memory usage is {{ $value | humanizePercentage }}"
+
+  # ============================================
+  # Workload Efficiency Alerts (Layer 2)
+  # What most teams miss - THE KEY INSIGHT
+  # ============================================
+  - name: workload_efficiency_alerts
+    interval: 30s
+    rules:
+      - alert: ThroughputDrop
+        expr: |
+          (
+            training_samples_per_second 
+            < 
+            0.6 * avg_over_time(training_samples_per_second[10m])
+          )
+          and
+          avg(dcgm_fi_dev_gpu_util) > 80
+        for: 2m
+        labels:
+          severity: critical
+          layer: workload
+        annotations:
+          summary: "Training throughput dropped despite healthy GPU utilization!"
+          description: |
+            Throughput is {{ $value | printf "%.0f" }} samples/s but GPU utilization is above 80%.
+            This indicates a hidden bottleneck - likely I/O or communication.
+            Job: {{ $labels.job_id }}, Model: {{ $labels.model }}
+
+      - alert: DataLoadingBottleneck
+        expr: training_data_loading_ratio > 0.25
+        for: 3m
+        labels:
+          severity: warning
+          layer: workload
+        annotations:
+          summary: "Data loading is becoming a bottleneck"
+          description: |
+            {{ $value | humanizePercentage }} of training time is spent waiting for data.
+            Consider: increasing num_workers, using faster storage, or prefetching.
+            Job: {{ $labels.job_id }}
+
+      - alert: CommunicationOverhead
+        expr: training_all_reduce_time_seconds > 0.15
+        for: 5m
+        labels:
+          severity: warning
+          layer: workload
+        annotations:
+          summary: "High gradient synchronization overhead"
+          description: |
+            All-reduce time is {{ $value | printf "%.3f" }}s per step.
+            Consider: gradient accumulation, smaller batch per GPU, or network investigation.
+
+      - alert: LowBatchEfficiency
+        expr: training_batch_efficiency < 0.75
+        for: 5m
+        labels:
+          severity: warning
+          layer: workload
+        annotations:
+          summary: "Batch efficiency is low"
+          description: |
+            Only {{ $value | humanizePercentage }} of configured batch size is being used effectively.
+            Check memory constraints or data pipeline issues.
+
+  # ============================================
+  # Model Health Alerts (Layer 3)
+  # Critical for catching training failures early
+  # ============================================
+  - name: model_health_alerts
+    interval: 30s
+    rules:
+      - alert: GradientExplosion
+        expr: training_gradient_norm > 100
+        for: 1m
+        labels:
+          severity: critical
+          layer: model
+        annotations:
+          summary: "Gradient explosion detected!"
+          description: |
+            Gradient norm is {{ $value | printf "%.1f" }} (threshold: 100).
+            Training is likely unstable. Consider: gradient clipping, lower LR, or architecture changes.
+            Job: {{ $labels.job_id }}, Model: {{ $labels.model }}
+
+      - alert: GradientVanishing
+        expr: training_gradient_norm < 0.01 and training_gradient_norm > 0
+        for: 5m
+        labels:
+          severity: warning
+          layer: model
+        annotations:
+          summary: "Vanishing gradients detected"
+          description: |
+            Gradient norm is only {{ $value | printf "%.4f" }}.
+            Model may have stopped learning. Check architecture depth or activation functions.
+
+      - alert: LossNotDecreasing
+        expr: |
+          (
+            training_loss 
+            > 
+            0.99 * min_over_time(training_loss[10m])
+          )
+          and
+          training_steps_total > 100
+        for: 10m
+        labels:
+          severity: warning
+          layer: model
+        annotations:
+          summary: "Training loss has plateaued"
+          description: |
+            Loss has not decreased significantly in the last 10 minutes.
+            Current: {{ $value | printf "%.4f" }}. Consider: LR scheduling, data augmentation, or architecture changes.
+
+      - alert: LossExploding
+        expr: |
+          training_loss 
+          > 
+          2 * avg_over_time(training_loss[5m] offset 5m)
+        for: 2m
+        labels:
+          severity: critical
+          layer: model
+        annotations:
+          summary: "Training loss is exploding!"
+          description: |
+            Loss has more than doubled: {{ $value | printf "%.2f" }}.
+            Training is diverging. Immediate intervention needed.
+
+      - alert: NegativeConvergenceVelocity
+        expr: training_convergence_velocity < -1
+        for: 3m
+        labels:
+          severity: critical
+          layer: model
+        annotations:
+          summary: "Model is getting worse, not better"
+          description: |
+            Convergence velocity is {{ $value | printf "%.2f" }} (negative = loss increasing).
+            Training is going in the wrong direction.
+
+  # ============================================
+  # Cross-Layer Correlation Alerts
+  # The real power of multi-layer observability
+  # ============================================
+  - name: cross_layer_alerts
+    interval: 30s
+    rules:
+      - alert: TrainingStalledDespiteHealthyInfra
+        expr: |
+          (
+            training_convergence_velocity < 0.05
+            and
+            avg(dcgm_fi_dev_gpu_util) > 85
+            and
+            training_data_loading_ratio < 0.15
+          )
+        for: 5m
+        labels:
+          severity: critical
+          layer: cross-layer
+        annotations:
+          summary: "Training stalled despite healthy infrastructure!"
+          description: |
+            All infrastructure metrics look healthy:
+            - GPU utilization: {{ printf "%.0f" (avg (dcgm_fi_dev_gpu_util)) }}%
+            - Data loading: normal
+            
+            But the model is not improving (convergence velocity: {{ $value | printf "%.3f" }}).
+            
+            This is exactly why Layer 3 monitoring matters.
+            Investigate: learning rate, model architecture, or data quality.
+
+      - alert: HiddenIOBottleneck
+        expr: |
+          (
+            training_data_loading_ratio > 0.3
+            and
+            avg(dcgm_fi_dev_gpu_util) > 85
+          )
+        for: 3m
+        labels:
+          severity: warning
+          layer: cross-layer
+        annotations:
+          summary: "Hidden I/O bottleneck - GPU looks healthy but isn't being fed fast enough"
+          description: |
+            Classic hidden bottleneck scenario:
+            - GPU utilization: {{ printf "%.0f" (avg (dcgm_fi_dev_gpu_util)) }}% (looks fine!)
+            - Data loading ratio: {{ $value | humanizePercentage }} (the real problem)
+            
+            Without Layer 2 metrics, you would never find this.
+            Action: Check NFS/storage performance, increase data loader workers.
