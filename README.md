@@ -210,7 +210,6 @@ For production deployments:
 3. **Correlation**: Slurm job IDs as labels across all layers
 4. **Alerting**: VMAlert with cross-layer rules
 
-See: [AI Observability Hub](https://github.com/erythix/ai-observability-hub)
 
 ---
 
